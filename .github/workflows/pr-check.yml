@@ -72,6 +72,7 @@ jobs:
       if: ${{ github.event.pull_request.draft == false }}
       run: |
         echo "运行最小必要测试集..."
+	pip install pytest
         python -m pytest test_forest.py -k "test_trade or test_hunt or test_check_restraint" -v
         
   require-approvals:
