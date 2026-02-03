@@ -33,7 +33,7 @@ jobs:
         echo "=== 运行关键游戏逻辑测试 ==="
         
         # 测试交易系统
-        #python -m pytest test_forest.py::TestForestGame::test_trade_success -v
+        python -m pytest test_forest.py::TestForestGame::test_trade_success -v
         #python -m pytest test_forest.py::TestForestGame::test_trade_fail_exceeds_limit -v
         
         # 测试捕食系统
