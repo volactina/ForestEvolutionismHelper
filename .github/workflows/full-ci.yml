@@ -89,6 +89,7 @@ jobs:
         
     - name: Run unit tests
       run: |
+	pip install pytest
         python -m pytest test_forest.py -v --tb=short --junitxml=junit/test-results-${{ matrix.python-version }}.xml
         
     - name: Run specific rule tests
