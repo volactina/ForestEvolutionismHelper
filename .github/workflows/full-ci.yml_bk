@@ -149,39 +149,39 @@ jobs:
         
         # 测试具体案例：红桃K捕食黑桃Q
         echo "=== 测试具体案例：红桃K捕食黑桃Q ==="
-        python << 'END'
-	import sys
-	sys.path.append('.')
-	try:
-	    from forest import Game, Player, CardRank, CardSuit
-	except ImportError:
-	    import importlib.util
-	    spec = importlib.util.spec_from_file_location('forest', 'forest.py')
-	    forest = importlib.util.module_from_spec(spec)
-	    spec.loader.exec_module(forest)
-	    Game = forest.Game
-	    Player = forest.Player
-	    CardRank = forest.CardRank
-	    CardSuit = forest.CardSuit
-	
-	# 测试红桃K捕食黑桃Q
-	game = Game()
-	game.player_count = 12
-	
-	player1 = Player(1)  # 红桃K
-	player2 = Player(2)  # 黑桃Q
-	
-	player1.rank = CardRank.K
-	player1.suit = CardSuit.HEART
-	player2.rank = CardRank.Q
-	player2.suit = CardSuit.SPADE
-	
-	result = game._check_restraint(player1, player2)
-	print(f'克制关系结果: {result}')
-	print(f'期望: 1 (红桃K应该克制黑桃Q, 因为K>Q)')
-	assert result == 1, f'测试失败: 红桃K应该克制黑桃Q，但得到{result}'
-	print('✅ 测试通过: 红桃K克制黑桃Q')
-        END
+        python -c "
+import sys
+sys.path.append('.')
+try:
+    from forest import Game, Player, CardRank, CardSuit
+except ImportError:
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('forest', 'forest.py')
+    forest = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(forest)
+    Game = forest.Game
+    Player = forest.Player
+    CardRank = forest.CardRank
+    CardSuit = forest.CardSuit
+
+# 测试红桃K捕食黑桃Q
+game = Game()
+game.player_count = 12
+
+player1 = Player(1)  # 红桃K
+player2 = Player(2)  # 黑桃Q
+
+player1.rank = CardRank.K
+player1.suit = CardSuit.HEART
+player2.rank = CardRank.Q
+player2.suit = CardSuit.SPADE
+
+result = game._check_restraint(player1, player2)
+print(f'克制关系结果: {result}')
+print(f'期望: 1 (红桃K应该克制黑桃Q, 因为K>Q)')
+assert result == 1, f'测试失败: 红桃K应该克制黑桃Q，但得到{result}'
+print('✅ 测试通过: 红桃K克制黑桃Q')
+        "
         
   integration-tests:
     name: Integration Tests
