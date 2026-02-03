@@ -1,0 +1,54 @@
+name: Label Compliance Check
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, synchronize]
+
+jobs:
+  label-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check label requirements
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          const labels = pr.labels.map(label => label.name);
+          
+          // 检查PR类型标签
+          const typeLabels = labels.filter(label => 
+            label.startsWith('type:') || 
+            label.startsWith('feat:') ||
+            label.startsWith('fix:') ||
+            label.startsWith('docs:') ||
+            label.startsWith('chore:')
+          );
+          
+          if (typeLabels.length === 0) {
+            console.error('❌ 请添加PR类型标签，如:');
+            console.error('  - type:feature (新功能)');
+            console.error('  - type:bugfix (bug修复)');
+            console.error('  - type:docs (文档更新)');
+            console.error('  - type:refactor (代码重构)');
+            process.exit(1);
+          }
+          
+          // 检查规模标签
+          const sizeLabels = labels.filter(label => 
+            label.startsWith('size:')
+          );
+          
+          if (sizeLabels.length === 0) {
+            console.warn('⚠️ 建议添加规模标签:');
+            console.warn('  - size:small (<100行)');
+            console.warn('  - size:medium (100-500行)');
+            console.warn('  - size:large (>500行)');
+          }
+          
+          console.log('✅ 标签检查通过');

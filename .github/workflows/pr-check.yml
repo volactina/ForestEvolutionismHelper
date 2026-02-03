@@ -1,0 +1,103 @@
+name: PR Quality Gate
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  pr-checks:
+    name: PR Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check PR size
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          const changedLines = files.reduce((acc, file) => acc + file.additions + file.deletions, 0);
+          
+          console.log(`本次PR修改了 ${files.length} 个文件，${changedLines} 行代码`);
+          
+          // 建议PR大小限制
+          if (changedLines > 1000) {
+            console.warn('⚠️ PR过大，建议拆分成多个小PR');
+          }
+          if (files.length > 20) {
+            console.warn('⚠️ 修改文件过多，建议关注关注点分离');
+          }
+          
+    - name: Check for WIP
+      run: |
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        if [[ "$PR_TITLE" =~ ^(WIP|wip|\[WIP\]|\[wip\]) ]]; then
+          echo "::warning::PR标记为WIP，请完成后移除WIP标记"
+        fi
+        
+    - name: Check commit messages
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: commits } = await github.rest.pulls.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          const badCommits = commits.filter(commit => 
+            commit.commit.message.length < 10 ||
+            commit.commit.message.startsWith('update') ||
+            commit.commit.message.startsWith('fix') ||
+            commit.commit.message.startsWith('add')
+          );
+          
+          if (badCommits.length > 0) {
+            console.warn('发现不规范的提交信息:');
+            badCommits.forEach(commit => {
+              console.warn(`  - ${commit.commit.message}`);
+            });
+            console.warn('建议使用更有描述性的提交信息，如:');
+            console.warn('  feat: 添加交易功能');
+            console.warn('  fix: 修复捕食逻辑错误');
+            console.warn('  docs: 更新README');
+          }
+          
+    - name: Run minimum required tests
+      if: ${{ github.event.pull_request.draft == false }}
+      run: |
+        echo "运行最小必要测试集..."
+        python -m pytest test_forest.py -k "test_trade or test_hunt or test_check_restraint" -v
+        
+  require-approvals:
+    if: ${{ github.event.pull_request.draft == false }}
+    needs: pr-checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check for required labels
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const { data: pr } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+          });
+          
+          const labels = pr.labels.map(label => label.name);
+          const requiredLabels = ['ready-for-review', 'tested'];
+          
+          for (const required of requiredLabels) {
+            if (!labels.includes(required)) {
+              console.error(`❌ 缺少必要标签: ${required}`);
+              console.error(`请添加标签: ${required}`);
+              process.exit(1);
+            }
+          }
+          console.log('✅ 所有必要标签已存在');
