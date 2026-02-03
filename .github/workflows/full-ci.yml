@@ -47,16 +47,3 @@ jobs:
         
         # 测试具体案例：红桃K捕食黑桃Q
         echo "=== 测试具体案例：红桃K捕食黑桃Q ==="
-        
-  final-validation:
-    name: Final Validation
-    needs: [game-logic-tests]
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Check all jobs passed
-      run: |
-        echo "🎉 所有检查通过!"
-        echo "游戏逻辑: ✅"
-        echo ""
-        echo "可以安全地合并代码"
