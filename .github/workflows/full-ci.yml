@@ -34,15 +34,15 @@ jobs:
         
         # 测试交易系统
         python -m pytest test_forest.py::TestForestGame::test_trade_success -v
-        #python -m pytest test_forest.py::TestForestGame::test_trade_fail_exceeds_limit -v
+        python -m pytest test_forest.py::TestForestGame::test_trade_fail_exceeds_limit -v
         
         # 测试捕食系统
-        #python -m pytest test_forest.py::TestForestGame::test_hunt_success -v
-        #python -m pytest test_forest.py::TestForestGame::test_hunt_fail_reverse -v
+        python -m pytest test_forest.py::TestForestGame::test_hunt_success -v
+        python -m pytest test_forest.py::TestForestGame::test_hunt_fail_reverse -v
         
         # 测试规则系统
-        #python -m pytest test_forest.py::TestForestGame::test_check_restraint_12_players -v
-        #python -m pytest test_rules.py::TestRestraintRules::test_rank_restraint_chain -v
+        python -m pytest test_forest.py::TestForestGame::test_check_restraint_12_players -v
+        python -m pytest test_rules.py::TestRestraintRules::test_rank_restraint_chain -v
         
         # 测试具体案例：红桃K捕食黑桃Q
         echo "=== 测试具体案例：红桃K捕食黑桃Q ==="
