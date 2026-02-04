@@ -56,4 +56,4 @@ jobs:
         python -m pytest test_forest.py::TestForestGame::test_modify_blood_to_death -v
         python -m pytest test_forest.py::TestForestGame::test_joker_special_rules -v
         python -m pytest test_forest.py::TestForestGame::test_different_player_counts -v
-        python -m pytest test_forest.py::TestForestGame::TestComprehensiveScenarios -v
+        python -m pytest test_forest.py::TestComprehensiveScenarios::test_full_game_flow -v
