@@ -308,7 +308,8 @@ class Game:
                 print(f"捕食成功！玩家{player1_no}克制玩家{player2_no}")
                 
                 if p2.blood <= k:  # player2死亡
-                    reward = p2.blood + 3
+                    # bugfix 击杀玩家获得全部捕食血量，而不是玩家剩余血量
+                    reward = k + 3
                     p1.blood += reward
                     p2.blood = 0
                     p2.is_alive = False
@@ -328,7 +329,8 @@ class Game:
                 print(f"捕食失败！玩家{player2_no}克制玩家{player1_no}")
                 
                 if p1.blood <= k:  # player1死亡
-                    reward = p1.blood + 3
+                    # bugfix 击杀玩家获得全部捕食血量，而不是玩家剩余血量
+                    reward = k + 3
                     p2.blood += reward
                     p1.blood = 0
                     p1.is_alive = False

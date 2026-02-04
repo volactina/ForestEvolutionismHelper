@@ -313,11 +313,12 @@ class TestForestGame(unittest.TestCase):
             
             output = fake_out.getvalue()
             self.assertIn("死亡", output)
-            self.assertIn("获得8点血奖励", output)  # 5+3
+            # bugfix 击杀玩家获得全部捕食血量，而不是只获得剩余血量
+            self.assertIn("获得13点血奖励", output)  # 10+3
         
         self.assertFalse(player2.is_alive)
         self.assertEqual(player2.blood, 0)
-        self.assertEqual(player1.blood, 28)  # 20+5+3
+        self.assertEqual(player1.blood, 33)  # 20+10+3
     
     def test_modify_blood(self):
         """测试修改血量"""
