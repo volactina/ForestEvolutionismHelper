@@ -43,6 +43,17 @@ jobs:
         # 测试规则系统
         python -m pytest test_forest.py::TestForestGame::test_check_restraint_12_players -v
         python -m pytest test_rules.py::TestRestraintRules::test_rank_restraint_chain -v
-        
-        # 测试具体案例：红桃K捕食黑桃Q
-        echo "=== 测试具体案例：红桃K捕食黑桃Q ==="
+
+        python -m pytest test_forest.py::TestForestGame::test_assign_identities_12_players -v
+        python -m pytest test_forest.py::TestForestGame::test_trade_fail_insufficient_blood -v
+        python -m pytest test_forest.py::TestForestGame::test_suit_restraint_12_players -v
+        python -m pytest test_forest.py::TestForestGame::test_tie_conditions_12_players -v
+        python -m pytest test_forest.py::TestForestGame::test_heart_k_vs_spade_q_should_fail -v
+        python -m pytest test_forest.py::TestForestGame::test_hunt_success -v
+        python -m pytest test_forest.py::TestForestGame::test_hunt_fail_reverse -v
+        python -m pytest test_forest.py::TestForestGame::test_hunt_player_death -v
+        python -m pytest test_forest.py::TestForestGame::test_modify_blood -v
+        python -m pytest test_forest.py::TestForestGame::test_modify_blood_to_death -v
+        python -m pytest test_forest.py::TestForestGame::test_joker_special_rules -v
+        python -m pytest test_forest.py::TestForestGame::test_different_player_counts -v
+        python -m pytest test_forest.py::TestForestGame::TestComprehensiveScenarios -v
