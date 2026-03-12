@@ -1,9 +1,11 @@
+# forest.py
 import random
 import datetime
 import json
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
 from game_config import GameConfig, GameSaveData
+from round_manager import RoundManager, run_with_round_manager
 
 class CardRank(Enum):
     """卡牌点数"""
@@ -29,6 +31,7 @@ class Player:
         self.rank: Optional[CardRank] = None  # 身份牌点数
         self.suit: Optional[CardSuit] = None  # 身份牌花色
         self.is_alive = True
+        self.skills: List[str] = []  # 玩家拥有的技能列表
         
     def __str__(self) -> str:
         if self.suit == CardSuit.JOKER or self.rank == CardRank.JOKER:
@@ -37,13 +40,19 @@ class Player:
     
     def get_info(self) -> str:
         """获取玩家完整信息"""
+        skill_info = f" 技能: {', '.join(self.skills)}" if self.skills else ""
         if GameConfig.NO_BLOOD_MODE:
-            return f"{str(self)} | 状态: {'存活' if self.is_alive else '死亡'}"
-        return f"{str(self)} | 血量: {self.blood} | 交易血量: {self.trade} | 状态: {'存活' if self.is_alive else '死亡'}"
+            return f"{str(self)} | 状态: {'存活' if self.is_alive else '死亡'}{skill_info}"
+        return f"{str(self)} | 血量: {self.blood} | 交易血量: {self.trade} | 状态: {'存活' if self.is_alive else '死亡'}{skill_info}"
     
     def get_identity_info(self) -> str:
         """获取玩家身份信息（无血量模式专用）"""
-        return f"{str(self)} | 状态: {'存活' if self.is_alive else '死亡'}"
+        skill_info = f" 技能: {', '.join(self.skills)}" if self.skills else ""
+        return f"{str(self)} | 状态: {'存活' if self.is_alive else '死亡'}{skill_info}"
+    
+    def add_skill(self, skill_name: str):
+        """添加技能"""
+        self.skills.append(skill_name)
     
     def to_dict(self) -> dict:
         """将玩家对象转换为字典（用于保存）"""
@@ -53,7 +62,8 @@ class Player:
             'trade': self.trade,
             'rank': self.rank.value if self.rank else None,
             'suit': self.suit.value if self.suit else None,
-            'is_alive': self.is_alive
+            'is_alive': self.is_alive,
+            'skills': self.skills.copy()  # 保存技能列表
         }
     
     @classmethod
@@ -63,6 +73,7 @@ class Player:
         player.blood = data['blood']
         player.trade = data['trade']
         player.is_alive = data['is_alive']
+        player.skills = data.get('skills', [])  # 恢复技能列表
         
         # 恢复rank
         if data['rank']:
@@ -88,6 +99,7 @@ class Game:
         self.player_count = 0
         self.joker_count = 0
         self.save_filename = None  # 当前游戏的存档文件名
+        self.round_manager = None  # 轮次管理器
         
     def start(self):
         """启动游戏（选择新建或继续）"""
@@ -98,18 +110,27 @@ class Game:
         while True:
             choice = input("请选择(1或2): ").strip()
             if choice == '1':
+                # 询问是否使用轮次管理
+                use_round_manager = run_with_round_manager(self)
                 self.setup_game()
+                if use_round_manager:
+                    self.run_with_rounds()
+                else:
+                    self.run()
                 break
             elif choice == '2':
                 if self.load_game():
+                    # 加载存档后，检查是否有轮次管理器
+                    if hasattr(self, 'round_manager') and self.round_manager:
+                        self.run_with_rounds()
+                    else:
+                        self.run()
                     break
                 else:
                     print("返回主菜单...")
             else:
                 print("请输入1或2！")
-        
-        self.run()
-        
+    
     def setup_game(self):
         """初始化新游戏"""
         print("=== 游戏初始化 ===")
@@ -156,6 +177,43 @@ class Game:
                 self.records.append(f"玩家{player.no}: {str(player)} 初始血量20")
             
         print("\n游戏初始化完成！")
+    
+    def run_with_rounds(self):
+        """使用轮次管理器运行游戏"""
+        # 初始化轮次管理器
+        self.round_manager = RoundManager(self)
+        
+        # 设置进化卡
+        self.round_manager.setup_evolution_cards()
+        
+        # 进行4轮游戏
+        for round_num in range(1, 5):
+            self.round_manager.start_round(round_num)
+            
+            # 自由阶段
+            self.round_manager.free_phase()
+            
+            # 捕食阶段
+            self.round_manager.predation_phase()
+            
+            # 进化阶段（第4轮没有）
+            if round_num <= 3:
+                self.round_manager.evolution_phase()
+            
+            # 轮次结束
+            self.round_manager.end_round()
+            
+            # 检查游戏是否应该结束
+            alive_count = sum(1 for p in self.players if p.is_alive)
+            if alive_count <= 1:
+                print(f"\n游戏结束！只剩{alive_count}名玩家存活")
+                break
+        
+        # 显示总结
+        if self.round_manager:
+            self.round_manager.show_summary()
+        
+        self.end_game()
         
     def _choose_game_mode(self):
         """选择游戏模式"""
@@ -552,6 +610,17 @@ class Game:
             'players': [player.to_dict() for player in self.players]
         }
         
+        # 如果有轮次管理器，也保存轮次状态
+        if hasattr(self, 'round_manager') and self.round_manager:
+            game_state['round_manager'] = {
+                'current_round': self.round_manager.current_round,
+                'evolution_cards': [
+                    {'card_id': c.card_id, 'name': c.name, 'owner': c.owner, 'round_obtained': c.round_obtained}
+                    for c in self.round_manager.evolution_cards
+                ],
+                'auction_records': self.round_manager.auction_records
+            }
+        
         if self.save_filename is None:
             self.save_filename = f"save_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
@@ -573,7 +642,8 @@ class Game:
                 save_time = data.get('save_time', '未知时间')
                 mode = "无血量" if data.get('no_blood_mode', False) else "标准"
                 players = data.get('player_count', 0)
-                print(f"{i}. {filename} [{save_time}] {players}人 {mode}模式")
+                has_round = "有轮次" if data.get('round_manager') else "无轮次"
+                print(f"{i}. {filename} [{save_time}] {players}人 {mode}模式 {has_round}")
             except:
                 print(f"{i}. {filename} [无法读取]")
         
@@ -614,6 +684,22 @@ class Game:
         for player_data in game_state['players']:
             player = Player.from_dict(player_data)
             self.players.append(player)
+        
+        # 恢复轮次管理器（如果有）
+        if 'round_manager' in game_state:
+            from round_manager import RoundManager, EvolutionCard
+            self.round_manager = RoundManager(self)
+            rm_data = game_state['round_manager']
+            self.round_manager.current_round = rm_data['current_round']
+            self.round_manager.auction_records = rm_data['auction_records']
+            
+            # 恢复进化卡
+            self.round_manager.evolution_cards = []
+            for card_data in rm_data['evolution_cards']:
+                card = EvolutionCard(card_data['card_id'], card_data['name'])
+                card.owner = card_data['owner']
+                card.round_obtained = card_data['round_obtained']
+                self.round_manager.evolution_cards.append(card)
         
         print(f"已加载 {len(self.players)} 名玩家")
         print(f"操作记录数: {len(self.records)}")
@@ -682,7 +768,7 @@ class Game:
         print("游戏已结束，感谢游玩！")
         
     def run(self):
-        """运行游戏"""
+        """运行游戏（原有模式）"""
         while True:
             print("\n=== 主菜单 ===")
             if GameConfig.NO_BLOOD_MODE:
@@ -772,4 +858,4 @@ class Game:
 
 if __name__ == "__main__":
     game = Game()
-    game.start()  # 改为调用start方法
+    game.start()
