@@ -2,6 +2,7 @@
 import random
 import datetime
 import json
+import pyperclip  # 新增导入
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
 from game_config import GameConfig, GameSaveData
@@ -138,7 +139,7 @@ class Game:
         # 先询问游戏模式
         self._choose_game_mode()
         
-        # 1. 设置游玩人数（现在支持6人以上，无上限）
+        # 1. 设置游玩人数
         while True:
             try:
                 self.player_count = int(input("请输入游玩人数(至少6人): "))
@@ -176,8 +177,89 @@ class Game:
                 self.records.append(f"玩家{player.no}: {str(player)}")
             else:
                 self.records.append(f"玩家{player.no}: {str(player)} 初始血量20")
-            
+        
         print("\n游戏初始化完成！")
+        
+        # 询问是否辅助发送微信消息
+        self._wechat_assistant()
+    
+    def _wechat_assistant(self):
+        """微信消息辅助发送功能"""
+        print("\n=== 微信消息辅助发送 ===")
+        print("是否辅助发送微信消息？")
+        print("1. 是 - 逐条显示玩家身份信息，自动复制到剪贴板")
+        print("2. 否 - 跳过")
+        
+        while True:
+            choice = input("请选择(1或2): ").strip()
+            if choice == '1':
+                self._send_wechat_messages()
+                break
+            elif choice == '2':
+                print("跳过微信消息辅助")
+                break
+            else:
+                print("请输入1或2！")
+    
+    def _send_wechat_messages(self):
+        """逐条显示玩家身份信息并自动复制到剪贴板"""
+        print("\n" + "=" * 60)
+        print("微信消息辅助发送 - 消息已自动复制到剪贴板，直接粘贴发送即可")
+        print("=" * 60)
+        
+        for player in self.players:
+            # 构建身份描述
+            if player.suit == CardSuit.JOKER or player.rank == CardRank.JOKER:
+                identity = "Joker"
+            else:
+                identity = f"{player.suit.value}{player.rank.value}"
+            
+            # 构建消息文本
+            message = f"{player.no}号玩家您好：\n您本局游戏的秘密身份为【{identity}】，\n请勿直接向他人公开展示本信息！"
+            
+            # 复制到剪贴板
+            try:
+                pyperclip.copy(message)
+                copy_status = "✅ 已复制到剪贴板"
+            except Exception as e:
+                copy_status = "❌ 复制失败，请手动复制"
+            
+            # 显示消息模板
+            print(f"\n【玩家 {player.no} 的消息】")
+            print("-" * 40)
+            print(f"📱 请发送给 {player.no} 号玩家：")
+            print()
+            print(f"    {message}")
+            print()
+            print(f"   {copy_status}")
+            print("-" * 40)
+            
+            # 等待确认
+            while True:
+                confirm = input(f"玩家 {player.no} 的消息已发送？(输入 y 继续，输入 r 重显示，输入 c 重新复制): ").strip().lower()
+                if confirm == 'y':
+                    break
+                elif confirm == 'r':
+                    # 重新显示当前玩家的消息
+                    print(f"\n【玩家 {player.no} 的消息重显示】")
+                    print("-" * 40)
+                    print(f"    {message}")
+                    print()
+                    print(f"   {copy_status}")
+                    print("-" * 40)
+                elif confirm == 'c':
+                    # 重新复制
+                    try:
+                        pyperclip.copy(message)
+                        print("✅ 已重新复制到剪贴板")
+                    except Exception as e:
+                        print("❌ 复制失败，请手动复制")
+                else:
+                    print("请输入 y 确认发送完毕，r 重新显示，c 重新复制")
+        
+        print("\n" + "=" * 60)
+        print("✅ 所有玩家的身份消息已发送完毕！")
+        print("=" * 60)
     
     def run_with_rounds(self):
         """使用轮次管理器运行游戏"""
