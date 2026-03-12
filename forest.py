@@ -63,7 +63,7 @@ class Player:
             'rank': self.rank.value if self.rank else None,
             'suit': self.suit.value if self.suit else None,
             'is_alive': self.is_alive,
-            'skills': self.skills.copy()  # 保存技能列表
+            'skills': self.skills.copy()
         }
     
     @classmethod
@@ -73,7 +73,7 @@ class Player:
         player.blood = data['blood']
         player.trade = data['trade']
         player.is_alive = data['is_alive']
-        player.skills = data.get('skills', [])  # 恢复技能列表
+        player.skills = data.get('skills', [])
         
         # 恢复rank
         if data['rank']:
@@ -138,13 +138,13 @@ class Game:
         # 先询问游戏模式
         self._choose_game_mode()
         
-        # 1. 设置游玩人数
+        # 1. 设置游玩人数（现在支持6人以上，无上限）
         while True:
             try:
-                self.player_count = int(input("请输入游玩人数(6-13人): "))
-                if 6 <= self.player_count <= 13:
+                self.player_count = int(input("请输入游玩人数(至少6人): "))
+                if self.player_count >= 6:
                     break
-                print("人数必须在6-13人之间！")
+                print("人数必须至少6人！")
             except ValueError:
                 print("请输入有效的数字！")
         
@@ -170,6 +170,7 @@ class Game:
         self.records.append(f"游戏初始化 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         self.records.append(f"玩家数量: {self.player_count}")
         self.records.append(f"游戏模式: {'无血量中控模式' if GameConfig.NO_BLOOD_MODE else '标准模式'}")
+        self.records.append(f"Joker数量: {self.joker_count}")
         for player in self.players:
             if GameConfig.NO_BLOOD_MODE:
                 self.records.append(f"玩家{player.no}: {str(player)}")
@@ -236,85 +237,104 @@ class Game:
         """根据人数分配身份"""
         all_cards = []
         
-        if self.player_count == 13:
-            # 4种花色的kqj + joker
-            suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB, CardSuit.DIAMOND]
+        # 标准配置（6-13人）
+        if self.player_count <= 13:
+            if self.player_count == 13:
+                # 4种花色的kqj + joker
+                suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB, CardSuit.DIAMOND]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                self.joker_count = 1
+                
+            elif self.player_count == 12:
+                # 4种花色的kqj
+                suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB, CardSuit.DIAMOND]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                self.joker_count = 0
+                
+            elif self.player_count == 11:
+                # 黑桃、红桃、梅花的kqj + 2个joker
+                suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                self.joker_count = 2
+                
+            elif self.player_count == 10:
+                # 黑桃、红桃、梅花的kqj + 1个joker
+                suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                self.joker_count = 1
+                
+            elif self.player_count == 9:
+                # 黑桃、红桃、梅花的kqj
+                suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                self.joker_count = 0
+                
+            elif self.player_count == 8:
+                # 黑桃、红桃的kqj + 2个joker
+                suits = [CardSuit.SPADE, CardSuit.HEART]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                self.joker_count = 2
+                
+            elif self.player_count == 7:
+                # 黑桃、红桃的kqj + 1个joker
+                suits = [CardSuit.SPADE, CardSuit.HEART]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
+                self.joker_count = 1
+                
+            elif self.player_count == 6:
+                # 黑桃、红桃的kqj
+                suits = [CardSuit.SPADE, CardSuit.HEART]
+                ranks = [CardRank.K, CardRank.Q, CardRank.J]
+                for suit in suits:
+                    for rank in ranks:
+                        all_cards.append((suit, rank))
+                self.joker_count = 0
+        
+        # 超过13人的配置
+        else:
+            # 先加入13人标准配置的所有卡牌
+            suits_4 = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB, CardSuit.DIAMOND]
             ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
+            for suit in suits_4:
                 for rank in ranks:
                     all_cards.append((suit, rank))
             all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            self.joker_count = 1
             
-        elif self.player_count == 12:
-            # 4种花色的kqj
-            suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB, CardSuit.DIAMOND]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            self.joker_count = 0
+            # 计算还需要多少张Joker
+            remaining_players = self.player_count - 13
+            for _ in range(remaining_players):
+                all_cards.append((CardSuit.JOKER, CardRank.JOKER))
             
-        elif self.player_count == 11:
-            # 黑桃、红桃、梅花的kqj + 2个joker
-            suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            self.joker_count = 2
-            
-        elif self.player_count == 10:
-            # 黑桃、红桃、梅花的kqj + 1个joker
-            suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            self.joker_count = 1
-            
-        elif self.player_count == 9:
-            # 黑桃、红桃、梅花的kqj
-            suits = [CardSuit.SPADE, CardSuit.HEART, CardSuit.CLUB]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            self.joker_count = 0
-            
-        elif self.player_count == 8:
-            # 黑桃、红桃的kqj + 2个joker
-            suits = [CardSuit.SPADE, CardSuit.HEART]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            self.joker_count = 2
-            
-        elif self.player_count == 7:
-            # 黑桃、红桃的kqj + 1个joker
-            suits = [CardSuit.SPADE, CardSuit.HEART]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            all_cards.append((CardSuit.JOKER, CardRank.JOKER))
-            self.joker_count = 1
-            
-        elif self.player_count == 6:
-            # 黑桃、红桃的kqj
-            suits = [CardSuit.SPADE, CardSuit.HEART]
-            ranks = [CardRank.K, CardRank.Q, CardRank.J]
-            for suit in suits:
-                for rank in ranks:
-                    all_cards.append((suit, rank))
-            self.joker_count = 0
-            
+            self.joker_count = 1 + remaining_players
+        
         # 洗牌并分配
         random.shuffle(all_cards)
         for i, player in enumerate(self.players):
@@ -336,15 +356,11 @@ class Game:
         Joker特殊规则:
         - Joker作为捕食方（主动攻击）: 一定成功 (返回1)
         - Joker作为被捕食方（被攻击）: 一定失败 (返回1，表示捕食方成功)
-        - 双Joker对战: 
-            * 11人局和8人局（多个Joker）: 平局 (返回0)
-            * 其他人数（单个Joker）: Joker胜 (返回1)
+        - 双Joker对战: 平局 (返回0)
         """
-        # 双Joker对战
+        # 双Joker对战 - 总是平局
         if player1.rank == CardRank.JOKER and player2.rank == CardRank.JOKER:
-            if self.player_count in [11, 8]:  # 这些人数有多个joker
-                return 0  # joker之间打平
-            return 1  # 单个joker时，捕食方joker胜
+            return 0  # joker之间总是打平
         
         # Joker作为捕食方（主动攻击）：一定成功
         if player1.rank == CardRank.JOKER:
@@ -366,8 +382,9 @@ class Game:
             return -1
         
         # 点数相同，检查花色克制
-        if self.player_count in [13, 12]:
-            # 13/12人局：黑桃>红桃>梅花>方片>黑桃
+        # 对于超过13人的情况，使用13人局的规则
+        if self.player_count >= 13:
+            # 13人及以上局：黑桃>红桃>梅花>方片>黑桃
             suit_order = {
                 CardSuit.SPADE: 4,
                 CardSuit.HEART: 3,
@@ -712,6 +729,7 @@ class Game:
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(f"游戏数据导出 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"玩家人数: {self.player_count}\n")
+                f.write(f"Joker数量: {self.joker_count}\n")
                 f.write(f"游戏模式: {'无血量中控模式' if GameConfig.NO_BLOOD_MODE else '标准模式'}\n")
                 f.write("=" * 50 + "\n")
                 
@@ -738,6 +756,7 @@ class Game:
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(f"游戏完整报告 - {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"玩家人数: {self.player_count}\n")
+                f.write(f"Joker数量: {self.joker_count}\n")
                 f.write(f"游戏模式: {'无血量中控模式' if GameConfig.NO_BLOOD_MODE else '标准模式'}\n")
                 f.write("=" * 60 + "\n")
                 
